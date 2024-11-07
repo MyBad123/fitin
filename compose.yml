@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: gena
+      MINIO_ROOT_PASSWORD: 12345678
+    command: server /data --console-address ":9001"
+
+  db:
+    image: postgres
+    container_name: db
+    restart: always
+    environment:
+      POSTGRES_DB: fitin_db
+      POSTGRES_USER: fitin
+      POSTGRES_PASSWORD: fitinpassword
+    ports:
+      - "5431:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  minio_data:
+  postgres_data:
