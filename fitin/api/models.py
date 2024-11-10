@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -8,6 +9,11 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
+        cache.delete('categories')
+
+        super().save(args, force_insert, force_update, using, update_fields)
 
 
 class Product(models.Model):
@@ -31,6 +37,9 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        unique_together = (('cart', 'product'),)
 
 
 class Order(models.Model):
