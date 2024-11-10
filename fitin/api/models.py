@@ -13,7 +13,7 @@ class Category(models.Model):
     def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):
         cache.delete('categories')
 
-        super().save(args, force_insert, force_update, using, update_fields)
+        super().save(*args, force_insert, force_update, using, update_fields)
 
 
 class Product(models.Model):
