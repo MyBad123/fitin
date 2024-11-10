@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +12,7 @@ from yookassa import Configuration, Payment
 from api.models import CartItem, Order, OrderItem
 from api.tasks import send_email_task
 
-Configuration.configure()
+Configuration.configure(settings.YOOKASSA_ID, settings.YOOKASSA_KEY)
 
 
 class SetOrder(APIView):
@@ -19,6 +20,7 @@ class SetOrder(APIView):
 
     def __init__(self, **kwargs):
         self.__user_id: None | int = None
+        self.__user__mail: None | str = None
 
         super().__init__(**kwargs)
 
@@ -42,18 +44,17 @@ class SetOrder(APIView):
 
         return f"{items_sum:.2f}"
 
-    def hzpost(self, request: Request):
-        user = request.user
-        queryset = CartItem.objects.filter(cart__user=user)
+    def __create_order(self) -> Response:
+        queryset = CartItem.objects.filter(cart__user__id=self.__user_id)
 
-        if len(CartItem.objects.filter(cart__user=user)):
-            order = Order.objects.create(user=user)
+        if len(queryset):
+            order = Order.objects.create(user__id=self.__user_id)
             order_products = [OrderItem(order=order, product=i.product, quantity=i.quantity) for i in queryset]
 
             OrderItem.objects.bulk_create(order_products)
             queryset.delete()
 
-            send_email_task.delay('Заказ', 'Вы получили заказ', user.email)
+            send_email_task.delay('Заказ', 'Вы получили заказ', self.__user__mail)
 
             return Response(status=status.HTTP_201_CREATED)
 
@@ -61,14 +62,25 @@ class SetOrder(APIView):
 
     def post(self, request: Request) -> Response:
         self.__user_id = request.user.id
+        self.__user__mail = request.user.email
+
         status_payment = self.__get_payment()
 
-        if status_payment:
-            pass
+        if status_payment == 'pending':
+            return Response(data={'message': 'You mast to pay'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        elif status_payment == 'waiting_for_capture':
+            cache.delete(f'user__{self.__user_id}')
+            return self.__create_order()
+
+        elif status_payment == 'canceled':
+            cache.delete(f'user__{self.__user_id}')
 
         items_sum = self.__get_sum()
         if items_sum == '0.00':
-            return Response(data={'message': 'You have an empty cart'})
+            return Response(data={'message': 'You have an empty cart'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         idempotence_key = str(uuid.uuid4())
         payment = Payment.create({

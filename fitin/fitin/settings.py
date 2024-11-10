@@ -115,3 +115,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+YOOKASSA_ID = os.getenv('YOOKASSA_ID')
+YOOKASSA_KEY = os.getenv('YOOKASSA_KEY')
