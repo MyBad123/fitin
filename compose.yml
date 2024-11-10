@@ -26,6 +26,11 @@ services:
       - "5431:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U fitin_db -d postgres -c \"SELECT 1 FROM pg_database WHERE datname = 'fitin_db';\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management

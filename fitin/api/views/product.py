@@ -3,7 +3,7 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 from api.models import Product
-from api.serializers import ProductSerializer
+from api.serializers.product import ProductSerializer
 
 
 class ProductsView(ListAPIView):
